@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="light dark" />
+<title>Fake QR Code Checker — CyberForge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75,700;100,400;100,500&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+/* ── TOKENS ─────────────────────────────────────────────── */
+:root {
+  --bg:          #FAF7F2;
+  --surface:     #F2EDE4;
+  --border:      #DDD5C8;
+  --ink:         #14202B;
+  --ink-muted:   #4A5C6A;
+  --accent:      #2F5D7C;
+  --accent-fg:   #FFFFFF;
+  --safe:        #1F7A4D;
+  --safe-bg:     #E5F4EC;
+  --safe-border: #9FDCBA;
+  --warn:        #A66A00;
+  --warn-bg:     #FFF4DC;
+  --warn-border: #F0C060;
+  --danger:      #B3261E;
+  --danger-bg:   #FDECEA;
+  --danger-border:#EFA09C;
+  --mono:        'Courier New', Courier, monospace;
+  --radius:      6px;
+  --col:         720px;
+}
+[data-theme="dark"] {
+  --bg:          #0E1720;
+  --surface:     #172230;
+  --border:      #2A3D50;
+  --ink:         #D8E4ED;
+  --ink-muted:   #7A99AE;
+  --accent:      #5490B2;
+  --accent-fg:   #0E1720;
+  --safe:        #43C180;
+  --safe-bg:     #0D2B1E;
+  --safe-border: #1E5E3A;
+  --warn:        #F0B840;
+  --warn-bg:     #2B1E00;
+  --warn-border: #6B4A00;
+  --danger:      #EF6B65;
+  --danger-bg:   #2B0A08;
+  --danger-border:#7A2520;
+}
+
+/* ── RESET ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Public Sans', system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.65;
+  min-height: 100vh;
+}
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible, label:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ── LAYOUT ─────────────────────────────────────────────── */
+.page-wrap {
+  max-width: var(--col);
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+/* ── HEADER ─────────────────────────────────────────────── */
+header {
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 0;
+  margin-bottom: 2.5rem;
+}
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.site-name {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 700;
+  font-variation-settings: 'wdth' 75;
+  font-size: clamp(1.1rem, 3vw, 1.35rem);
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.site-name span {
+  display: block;
+  font-family: 'Public Sans', sans-serif;
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  font-variation-settings: normal;
+  letter-spacing: 0;
+  margin-top: 2px;
+}
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.45rem 0.65rem;
+  transition: border-color 0.15s;
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── CHECKER ─────────────────────────────────────────────── */
+.checker {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+  margin-bottom: 2rem;
+}
+.checker-heading {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 700;
+  font-variation-settings: 'wdth' 75;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin-bottom: 0.35rem;
+}
+.checker-sub {
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  max-width: 60ch;
+}
+.privacy-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.65rem 0.9rem;
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+  margin-bottom: 1.5rem;
+}
+.privacy-note::before {
+  content: "🔒";
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  margin-top: 1px;
+}
+
+/* input tabs */
+.input-tabs {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+  width: fit-content;
+}
+.tab-btn {
+  background: none;
+  border: none;
+  border-right: 1px solid var(--border);
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-family: 'Public Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.5rem 1.1rem;
+  transition: background 0.1s, color 0.1s;
+}
+.tab-btn:last-child { border-right: none; }
+.tab-btn[aria-selected="true"] {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.tab-btn:hover:not([aria-selected="true"]) {
+  background: var(--border);
+  color: var(--ink);
+}
+
+/* panels */
+.input-panel { display: none; }
+.input-panel.active { display: block; }
+
+/* drop zone */
+.drop-zone {
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 2rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative;
+}
+.drop-zone.drag-over {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.drop-zone input[type="file"] {
+  display: none;
+}
+.upload-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-top: 0.8rem;
+}
+.batch-results {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+.batch-results[hidden] { display: none; }
+.batch-result {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  overflow-wrap: anywhere;
+}
+.batch-result strong { display: block; }
+.batch-result p { color: var(--ink-muted); font-size: 0.85rem; margin-top: 0.25rem; }
+.batch-result.safe { border-left: 4px solid var(--safe); }
+.batch-result.warn { border-left: 4px solid var(--warn); }
+.batch-result.danger { border-left: 4px solid var(--danger); }
+.batch-heading { font-size: 0.9rem; font-weight: 600; }
+.batch-result code {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  margin-top: 0.35rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.maker-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+.maker-fields { display: grid; gap: 0.55rem; }
+.maker-fields label { font-size: 0.85rem; font-weight: 600; }
+.maker-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font: inherit;
+  padding: 0.65rem 0.85rem;
+}
+textarea.maker-input { min-height: 7rem; resize: vertical; }
+.maker-preview {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+.maker-preview[hidden] { display: none; }
+#generated-qr {
+  display: block;
+  width: min(100%, 240px);
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid var(--border);
+  padding: 8px;
+}
+.maker-status { color: var(--ink-muted); font-size: 0.82rem; min-height: 1.3em; }
+.drop-zone-label {
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+  pointer-events: none;
+}
+.drop-zone-label strong {
+  display: block;
+  font-size: 1rem;
+  color: var(--ink);
+  margin-bottom: 0.25rem;
+}
+.drop-size-note {
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  margin-top: 0.4rem;
+  display: block;
+}
+
+/* camera panel */
+.camera-area { position: relative; }
+#camera-video {
+  width: 100%;
+  max-height: 300px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  display: none;
+  background: #000;
+}
+.camera-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* paste panel */
+.paste-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+#paste-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  padding: 0.65rem 0.85rem;
+  transition: border-color 0.15s;
+}
+#paste-input::placeholder { color: var(--ink-muted); font-family: 'Public Sans', sans-serif; }
+#paste-input:focus { border-color: var(--accent); outline: none; }
+
+/* buttons */
+.btn {
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: var(--accent-fg);
+  cursor: pointer;
+  font-family: 'Public Sans', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.65rem 1.3rem;
+  transition: opacity 0.1s;
+  white-space: nowrap;
+}
+.btn:hover { opacity: 0.88; }
+.btn:active { opacity: 0.75; }
+.btn-outline {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--ink);
+}
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
+.btn-danger-outline {
+  background: none;
+  border: 1px solid var(--danger-border);
+  color: var(--danger);
+}
+
+/* ── ERROR STATE ────────────────────────────────────────── */
+.error-box {
+  display: none;
+  border: 1px solid var(--danger-border);
+  background: var(--danger-bg);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--danger);
+}
+.error-box strong { display: block; margin-bottom: 0.2rem; }
+.error-box p { color: var(--ink-muted); font-size: 0.85rem; margin-top: 0.2rem; }
+
+/* ── RESULT ─────────────────────────────────────────────── */
+#result-section { display: none; margin-top: 1.5rem; }
+
+/* verdict row */
+.verdict-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.verdict-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: var(--radius);
+  border: 1.5px solid;
+  font-family: 'Archivo', sans-serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  padding: 0.4rem 0.9rem;
+}
+.verdict-badge.safe   { color: var(--safe);   border-color: var(--safe-border);   background: var(--safe-bg); }
+.verdict-badge.warn   { color: var(--warn);   border-color: var(--warn-border);   background: var(--warn-bg); }
+.verdict-badge.danger { color: var(--danger); border-color: var(--danger-border); background: var(--danger-bg); }
+.verdict-icon { font-size: 1.1rem; }
+.verdict-score {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+/* ── URL ANATOMY ────────────────────────────────────────── */
+.anatomy-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+.anatomy-heading {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-bottom: 0.9rem;
+}
+.url-display {
+  font-family: var(--mono);
+  font-size: clamp(0.72rem, 2vw, 0.9rem);
+  word-break: break-all;
+  line-height: 2;
+  margin-bottom: 1rem;
+}
+.url-part {
+  display: inline;
+  border-radius: 3px;
+  padding: 1px 3px;
+  position: relative;
+  cursor: default;
+}
+.url-part.flagged {
+  background: var(--danger-bg);
+  border-bottom: 2px solid var(--danger);
+  color: var(--danger);
+}
+.url-part.flagged-warn {
+  background: var(--warn-bg);
+  border-bottom: 2px solid var(--warn);
+  color: var(--warn);
+}
+
+/* anatomy legend */
+.anatomy-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+.legend-item { display: flex; align-items: center; gap: 0.35rem; color: var(--ink-muted); }
+.legend-swatch {
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.legend-swatch.scheme  { background: var(--border); }
+.legend-swatch.host    { background: color-mix(in srgb, var(--accent) 25%, transparent); border: 1px solid var(--accent); }
+.legend-swatch.path    { background: color-mix(in srgb, var(--ink-muted) 15%, transparent); }
+
+/* findings */
+.findings-heading {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  margin-bottom: 0.6rem;
+}
+.findings-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.finding-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.875rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+}
+.finding-item.danger { background: var(--danger-bg); border-color: var(--danger-border); }
+.finding-item.warn   { background: var(--warn-bg);   border-color: var(--warn-border); }
+.finding-item.safe   { background: var(--safe-bg);   border-color: var(--safe-border); }
+.finding-icon { flex-shrink: 0; font-size: 1rem; margin-top: 1px; }
+.finding-text strong { display: block; font-weight: 600; }
+.finding-text small { color: var(--ink-muted); font-size: 0.8rem; }
+
+/* disclaimer */
+.disclaimer {
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+  border-top: 1px solid var(--border);
+  padding-top: 0.9rem;
+  margin-top: 1.25rem;
+}
+
+/* ── TIPS & INFO ────────────────────────────────────────── */
+.section { margin-bottom: 2.5rem; }
+.section-heading {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 700;
+  font-variation-settings: 'wdth' 90;
+  font-size: 1.2rem;
+  letter-spacing: -0.01em;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.section p { max-width: 66ch; color: var(--ink-muted); margin-bottom: 0.65rem; font-size: 0.92rem; }
+.section p:last-child { margin-bottom: 0; }
+.section strong { color: var(--ink); }
+
+.tips-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.tips-list li {
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 0;
+  font-size: 0.92rem;
+  max-width: 66ch;
+  color: var(--ink);
+  display: flex;
+  gap: 0.75rem;
+}
+.tips-list li::before {
+  content: "—";
+  color: var(--border);
+  flex-shrink: 0;
+}
+.tips-list li:first-child { border-top: 1px solid var(--border); }
+
+.checks-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+.checks-table th {
+  text-align: left;
+  font-weight: 600;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+.checks-table td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  color: var(--ink-muted);
+  vertical-align: top;
+}
+.checks-table tr:nth-child(even) td { background: var(--surface); }
+.weight-high  { color: var(--danger); font-weight: 600; }
+.weight-med   { color: var(--warn);   font-weight: 600; }
+.weight-low   { color: var(--ink-muted); }
+
+/* ── FOOTER ─────────────────────────────────────────────── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 1.5rem 0 2rem;
+  margin-top: 2rem;
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+}
+footer p { margin-bottom: 0.25rem; }
+footer strong { color: var(--ink); }
+
+/* ── REDUCED MOTION ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+}
+
+/* ── RESPONSIVE ─────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .checker { padding: 1.25rem 1rem; }
+  .paste-row { flex-direction: column; }
+  .anatomy-section { padding: 1rem; }
+  .checks-table { font-size: 0.78rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-inner">
+      <a href="qr-checker.html" class="site-name" style="text-decoration:none;color:inherit;">
+        Fake QR Code Checker
+        <span>CyberForge · student cybersecurity team</span>
+      </a>
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+        <a href="qr-checker.html" style="font-size:0.875rem;font-weight:600;color:var(--accent);text-decoration:none;padding:0.35rem 0.65rem;border-radius:var(--radius);">Checker</a>
+        <a href="about.html" style="font-size:0.875rem;font-weight:500;color:var(--ink-muted);text-decoration:none;padding:0.35rem 0.65rem;border-radius:var(--radius);" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--ink-muted)'">About</a>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Switch to dark mode" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;padding:0;">
+          <svg id="icon-moon" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg id="icon-sun"  style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;display:none;" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- CHECKER -->
+  <section class="checker" aria-label="QR code checker">
+    <h1 class="checker-heading">Check a QR code before you open it</h1>
+    <p class="checker-sub">Upload an image, scan with your camera, or paste the link. We read the destination and tell you what we found.</p>
+
+    <div class="privacy-note" role="note">
+      Nothing leaves your device. QR images are decoded entirely in your browser. No image, URL or personal data is uploaded anywhere.
+    </div>
+
+    <!-- TABS -->
+    <div class="input-tabs" role="tablist" aria-label="Input method">
+      <button class="tab-btn" role="tab" aria-selected="true"  aria-controls="panel-upload" id="tab-upload">Upload image</button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-camera" id="tab-camera">Scan with camera</button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-paste"  id="tab-paste">Paste a link</button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-maker" id="tab-maker">Make a QR</button>
+    </div>
+
+    <!-- PANEL: UPLOAD -->
+    <div class="input-panel active" id="panel-upload" role="tabpanel" aria-labelledby="tab-upload">
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" id="file-input" accept="image/*" multiple aria-label="Choose QR code image files" />
+        <input type="file" id="folder-input" accept="image/*" multiple webkitdirectory directory aria-label="Choose a folder of QR code images" />
+        <div class="drop-zone-label">
+          <strong>Choose images or a folder</strong>
+          Drag and drop image files here
+          <span class="drop-size-note">PNG, JPG, WebP · Max 10 MB per image</span>
+          <span class="upload-actions">
+            <button type="button" class="btn" id="choose-images-btn">Choose images</button>
+            <button type="button" class="btn btn-outline" id="choose-folder-btn">Choose folder</button>
+          </span>
+        </div>
+      </div>
+      <div class="batch-results" id="batch-results" aria-live="polite" hidden></div>
+    </div>
+
+    <!-- PANEL: CAMERA -->
+    <div class="input-panel" id="panel-camera" role="tabpanel" aria-labelledby="tab-camera">
+      <div class="camera-area">
+        <video id="camera-video" playsinline autoplay muted aria-label="Camera preview"></video>
+        <canvas id="camera-canvas" style="display:none"></canvas>
+      </div>
+      <div class="camera-actions">
+        <button class="btn" id="start-camera-btn">Start camera</button>
+        <button class="btn btn-danger-outline" id="stop-camera-btn" style="display:none">Stop camera</button>
+      </div>
+      <p style="font-size:0.82rem;color:var(--ink-muted);margin-top:0.65rem">
+        Point the QR code at the camera. It checks automatically when a code is detected.
+      </p>
+    </div>
+
+    <!-- PANEL: PASTE -->
+    <div class="input-panel" id="panel-paste" role="tabpanel" aria-labelledby="tab-paste">
+      <div class="paste-row">
+        <input
+          type="text"
+          id="paste-input"
+          placeholder="Paste the link from the QR code"
+          aria-label="Link from QR code"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="btn" id="check-paste-btn">Check link</button>
+      </div>
+    </div>
+
+    <!-- PANEL: QR MAKER -->
+    <div class="input-panel" id="panel-maker" role="tabpanel" aria-labelledby="tab-maker">
+      <form class="maker-layout" id="qr-maker-form">
+        <div class="maker-fields">
+          <label for="qr-content">Text or web address</label>
+          <textarea class="maker-input" id="qr-content" placeholder="https://example.com" required></textarea>
+          <label for="qr-correction">Error correction</label>
+          <select class="maker-input" id="qr-correction">
+            <option value="L">Low</option>
+            <option value="M" selected>Medium</option>
+            <option value="Q">Quartile</option>
+            <option value="H">High</option>
+          </select>
+          <button class="btn" type="submit">Generate QR</button>
+          <p class="maker-status" id="maker-status" aria-live="polite"></p>
+        </div>
+        <div class="maker-preview" id="maker-preview" hidden>
+          <img id="generated-qr" alt="Generated QR code preview" />
+          <button class="btn btn-outline" id="download-qr-btn" type="button">Download SVG</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ERROR -->
+    <div class="error-box" id="error-box" role="alert" aria-live="polite">
+      <strong id="error-title"></strong>
+      <p id="error-detail"></p>
+    </div>
+
+    <!-- RESULT -->
+    <div id="result-section" aria-live="polite">
+
+      <div class="verdict-row">
+        <div class="verdict-badge" id="verdict-badge">
+          <span class="verdict-icon" id="verdict-icon"></span>
+          <span id="verdict-text"></span>
+        </div>
+        <div class="verdict-score" id="verdict-score"></div>
+      </div>
+
+      <!-- URL ANATOMY -->
+      <div class="anatomy-section" id="anatomy-section">
+        <div class="anatomy-heading">Decoded address — where the issue is</div>
+        <div class="url-display" id="url-display"></div>
+        <div class="anatomy-legend">
+          <span class="legend-item"><span class="legend-swatch scheme"></span>scheme</span>
+          <span class="legend-item"><span class="legend-swatch host"></span>host</span>
+          <span class="legend-item"><span class="legend-swatch path"></span>path / query</span>
+        </div>
+        <div class="findings-heading" id="findings-heading"></div>
+        <ul class="findings-list" id="findings-list"></ul>
+      </div>
+
+      <div class="disclaimer">
+        These are automated checks. Results may contain false positives and false negatives. New threats can slip past these checks. When in doubt, do not open the link.
+      </div>
+
+    </div><!-- /result-section -->
+  </section>
+
+  <!-- TIPS -->
+  <section class="section" aria-labelledby="tips-heading">
+    <h2 class="section-heading" id="tips-heading">How to spot a fake QR code</h2>
+    <ul class="tips-list">
+      <li><strong>Sticker on top of the real code.</strong> Look closely at payment QR codes on counters and parking meters. A sticker pasted over the original is the most common attack.</li>
+      <li><strong>The address does not match the place.</strong> A coffee shop should link to a coffee shop domain, not "pay-now-secure.xyz". Read the destination before you open it.</li>
+      <li><strong>Payment requests hidden in a link.</strong> Some QR codes encode a UPI or payment link directly. You can accept or reject payment prompts in your app, but read the amount and recipient first.</li>
+      <li><strong>Pressure in the message.</strong> "Scan now to claim your prize", "Your parcel is held — scan to release it." Urgency is a manipulation tactic, not a reason to hurry.</li>
+      <li><strong>Bank and government websites.</strong> Type the address yourself. Never rely on a QR code, a text, or a link for your banking app, tax portal or any login page that matters.</li>
+    </ul>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p><strong>Fake QR Code Checker</strong> by the CyberForge student cybersecurity team. <a href="about.html">About this tool</a></p>
+    <p>Results are not guarantees. These checks catch common patterns but new threats can slip past them. When in doubt, do not open the link.</p>
+  </footer>
+
+</div><!-- /page-wrap -->
+
+<script src="node_modules/qrcode-generator/dist/qrcode.js"></script>
+<script src="node_modules/jsqr/dist/jsQR.js"></script>
+<script>
+'use strict';
+
+/* ── THEME TOGGLE ──────────────────────────────────────── */
+(function () {
+  const html     = document.documentElement;
+  const btn      = document.getElementById('theme-toggle');
+  const moonIcon = document.getElementById('icon-moon');
+  const sunIcon  = document.getElementById('icon-sun');
+  function apply(theme) {
+    html.setAttribute('data-theme', theme);
+    moonIcon.style.display = theme === 'dark' ? 'none' : '';
+    sunIcon.style.display  = theme === 'dark' ? ''     : 'none';
+    btn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+  }
+  const stored      = localStorage.getItem('qrc-theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  apply(stored || (prefersDark ? 'dark' : 'light'));
+  btn.addEventListener('click', () => {
+    const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    apply(next);
+    localStorage.setItem('qrc-theme', next);
+  });
+})();
+
+/* ── TABS ───────────────────────────────────────────────── */
+(function () {
+  const tabs = document.querySelectorAll('.tab-btn');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => {
+        t.setAttribute('aria-selected', 'false');
+        document.getElementById(t.getAttribute('aria-controls')).classList.remove('active');
+      });
+      tab.setAttribute('aria-selected', 'true');
+      document.getElementById(tab.getAttribute('aria-controls')).classList.add('active');
+      clearError();
+    });
+  });
+})();
+
+/* ── ERROR HELPERS ──────────────────────────────────────── */
+function showError(title, detail) {
+  const box = document.getElementById('error-box');
+  document.getElementById('error-title').textContent = title;
+  document.getElementById('error-detail').textContent = detail;
+  box.style.display = 'block';
+  document.getElementById('result-section').style.display = 'none';
+}
+function clearError() {
+  document.getElementById('error-box').style.display = 'none';
+}
+
+/* ── FILE UPLOAD ────────────────────────────────────────── */
+(function () {
+  const dz = document.getElementById('drop-zone');
+  const fi = document.getElementById('file-input');
+  const folderInput = document.getElementById('folder-input');
+  const batchResults = document.getElementById('batch-results');
+
+  document.getElementById('choose-images-btn').addEventListener('click', () => fi.click());
+  document.getElementById('choose-folder-btn').addEventListener('click', () => folderInput.click());
+
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    processFiles(e.dataTransfer.files);
+  });
+
+  [fi, folderInput].forEach(input => input.addEventListener('change', () => {
+    processFiles(input.files);
+    input.value = '';
+  }));
+
+  async function processFiles(fileList) {
+    const files = Array.from(fileList).filter(file => file.type.startsWith('image/'));
+    batchResults.replaceChildren();
+    batchResults.hidden = true;
+    if (!files.length) {
+      showError('No images found', 'Choose image files or a folder containing images.');
+      return;
+    }
+    clearError();
+    if (files.length === 1) {
+      processFile(files[0]);
+      return;
+    }
+
+    document.getElementById('result-section').style.display = 'none';
+    batchResults.hidden = false;
+    const heading = document.createElement('p');
+    heading.className = 'batch-heading';
+    heading.textContent = `Checking ${files.length} images`;
+    batchResults.appendChild(heading);
+
+    for (const file of files) {
+      const item = document.createElement('div');
+      item.className = 'batch-result';
+      const name = document.createElement('strong');
+      name.textContent = file.webkitRelativePath || file.name;
+      item.appendChild(name);
+      batchResults.appendChild(item);
+
+      const result = await inspectFile(file);
+      item.classList.add(result.level);
+      const status = document.createElement('p');
+      status.textContent = result.message;
+      item.appendChild(status);
+      if (result.raw) {
+        const decoded = document.createElement('code');
+        decoded.textContent = result.raw;
+        item.appendChild(decoded);
+      }
+    }
+    heading.textContent = `Checked ${files.length} images`;
+  }
+
+  function inspectFile(file) {
+    return new Promise(resolve => {
+      if (file.size > 10 * 1024 * 1024) {
+        resolve({ level: 'warn', message: 'Skipped: image is over 10 MB.' });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onerror = () => resolve({ level: 'warn', message: 'Could not read this image.' });
+      reader.onload = () => {
+        const image = new Image();
+        image.onerror = () => resolve({ level: 'warn', message: 'Could not decode this image.' });
+        image.onload = () => {
+          const scale = Math.min(1, 1200 / Math.max(image.width, image.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.width * scale));
+          canvas.height = Math.max(1, Math.round(image.height * scale));
+          const context = canvas.getContext('2d');
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(pixels.data, pixels.width, pixels.height);
+          if (!code) {
+            resolve({ level: 'warn', message: 'No QR code found.' });
+            return;
+          }
+          const analysis = analyze(code.data);
+          const level = analysis.type === 'url'
+            ? (analysis.verdict === 'dangerous' ? 'danger' : analysis.verdict === 'suspicious' ? 'warn' : 'safe')
+            : (analysis.type === 'dangerous_scheme' ? 'danger' : analysis.type === 'plain_text' ? 'safe' : 'warn');
+          const message = analysis.type === 'url'
+            ? `${analysis.verdict === 'safe' ? 'No warning signs found' : analysis.verdict === 'suspicious' ? 'Suspicious' : 'Dangerous'} · Risk score ${analysis.score}/100`
+            : ({ upi: 'Payment request (UPI)', plain_text: 'Plain text, not a link', dangerous_scheme: 'Dangerous link type', malformed: 'Malformed address', unknown_scheme: 'Unusual link type' }[analysis.type] || 'QR code decoded');
+          resolve({ level, message, raw: code.data });
+        };
+        image.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+})();
+
+function processFile(file) {
+  clearError();
+  if (!file.type.startsWith('image/')) {
+    showError('Not an image', 'Choose a PNG, JPG or WebP file containing a QR code.');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    showError('File too large', 'The image is over 10 MB. Resize it or take a screenshot and try again.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => decodeImageData(e.target.result);
+  reader.readAsDataURL(file);
+}
+
+function decodeImageData(dataUrl) {
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    const MAX = 1200;
+    let w = img.width, h = img.height;
+    if (w > MAX || h > MAX) {
+      const scale = MAX / Math.max(w, h);
+      w = Math.round(w * scale);
+      h = Math.round(h * scale);
+    }
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    const imageData = ctx.getImageData(0, 0, w, h);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    if (!code) {
+      showError('No QR code found', 'Make sure the image contains a clear, unobstructed QR code and try again.');
+      return;
+    }
+    analyzeAndRender(code.data);
+  };
+  img.onerror = () => showError('Image could not be read', 'The file may be corrupted or in an unsupported format.');
+  img.src = dataUrl;
+}
+
+/* ── CAMERA ─────────────────────────────────────────────── */
+(function () {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  const startBtn = document.getElementById('start-camera-btn');
+  const stopBtn  = document.getElementById('stop-camera-btn');
+  let stream = null;
+  let rafId = null;
+  let found = false;
+
+  startBtn.addEventListener('click', async () => {
+    clearError();
+    found = false;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showError('Camera not available', 'Your browser does not support camera access. Use the upload option instead.');
+      return;
+    }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = stream;
+      video.style.display = 'block';
+      startBtn.style.display = 'none';
+      stopBtn.style.display = '';
+      video.addEventListener('loadedmetadata', tick);
+    } catch (err) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        showError('Camera access blocked', 'Allow camera access in your browser settings, then try again.');
+      } else if (err.name === 'NotFoundError') {
+        showError('No camera found', 'No camera is available on this device. Use the upload option instead.');
+      } else {
+        showError('Camera error', 'Could not start the camera. Try the upload option instead.');
+      }
+    }
+  });
+
+  stopBtn.addEventListener('click', stopCamera);
+
+  function stopCamera() {
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    video.style.display = 'none';
+    video.srcObject = null;
+    startBtn.style.display = '';
+    stopBtn.style.display = 'none';
+    found = false;
+  }
+
+  function tick() {
+    if (found || !stream) return;
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      if (code) {
+        found = true;
+        stopCamera();
+        analyzeAndRender(code.data);
+        return;
+      }
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+})();
+
+/* ── PASTE ───────────────────────────────────────────────── */
+(function () {
+  const input = document.getElementById('paste-input');
+  const btn   = document.getElementById('check-paste-btn');
+
+  btn.addEventListener('click', () => {
+    const val = input.value.trim();
+    if (!val) { showError('Nothing to check', 'Paste a link or address from the QR code first.'); return; }
+    clearError();
+    analyzeAndRender(val);
+  });
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') btn.click();
+  });
+})();
+
+/* ── QR MAKER ──────────────────────────────────────────── */
+(function () {
+  const form = document.getElementById('qr-maker-form');
+  const content = document.getElementById('qr-content');
+  const correction = document.getElementById('qr-correction');
+  const preview = document.getElementById('maker-preview');
+  const image = document.getElementById('generated-qr');
+  const status = document.getElementById('maker-status');
+  const downloadButton = document.getElementById('download-qr-btn');
+  let svgUrl = null;
+
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    clearError();
+    try {
+      const code = qrcode(0, correction.value);
+      code.addData(content.value.trim());
+      code.make();
+      const svg = code.createSvgTag({ cellSize: 8, margin: 4, scalable: true });
+      if (svgUrl) URL.revokeObjectURL(svgUrl);
+      svgUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+      image.src = svgUrl;
+      preview.hidden = false;
+      status.textContent = 'QR code generated.';
+    } catch {
+      preview.hidden = true;
+      status.textContent = '';
+      showError('Could not generate QR code', 'The text may be too long for this correction level. Shorten it and try again.');
+    }
+  });
+
+  downloadButton.addEventListener('click', () => {
+    if (!svgUrl) return;
+    const link = document.createElement('a');
+    link.href = svgUrl;
+    link.download = 'qr-code.svg';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  });
+})();
+
+/* ══════════════════════════════════════════════════════════
+   ANALYSIS ENGINE
+══════════════════════════════════════════════════════════ */
+
+const SHORTENERS = new Set([
+  'bit.ly','tinyurl.com','t.co','ow.ly','goo.gl','is.gd','buff.ly',
+  'adf.ly','shorte.st','clck.ru','rebrand.ly','cutt.ly','rb.gy',
+  'tiny.cc','bl.ink','shorturl.at','bit.do'
+]);
+
+const RISKY_TLDS = new Set([
+  'zip','top','xyz','tk','gq','ml','ga','cf','pw','cc','click',
+  'loan','work','date','faith','racing','win','party','review',
+  'stream','download','cricket','science','link','live'
+]);
+
+const BRANDS = [
+  'paypal','apple','google','microsoft','amazon','netflix','facebook',
+  'instagram','twitter','youtube','whatsapp','linkedin','dropbox',
+  'ebay','walmart','chase','wellsfargo','barclays','hsbc','citibank',
+  'sbi','hdfc','icici','axisbank','paytm','phonepe','gpay'
+];
+
+const PRESSURE_WORDS = [
+  'login','verify','refund','otp','kyc','prize','reward','claim',
+  'urgent','secure','confirm','password','update','account','validate',
+  'suspend','limit','block','hack','alert'
+];
+
+const BRAND_DOMAINS = {
+  paypal:['paypal.com'],apple:['apple.com','icloud.com'],
+  google:['google.com','googleapis.com','goo.gl'],
+  microsoft:['microsoft.com','live.com','outlook.com','hotmail.com','xbox.com'],
+  amazon:['amazon.com','amazon.in','amazon.co.uk','amazonaws.com'],
+  netflix:['netflix.com'],facebook:['facebook.com','fb.com','instagram.com'],
+  instagram:['instagram.com'],twitter:['twitter.com','x.com'],
+  youtube:['youtube.com','youtu.be'],
+  whatsapp:['whatsapp.com'],dropbox:['dropbox.com'],ebay:['ebay.com'],
+  walmart:['walmart.com'],chase:['chase.com'],
+  wellsfargo:['wellsfargo.com'],barclays:['barclays.com'],
+  hsbc:['hsbc.com'],citibank:['citi.com','citibank.com'],
+  sbi:['sbi.co.in'],hdfc:['hdfcbank.com'],icici:['icicibank.com'],
+  axisbank:['axisbank.com'],paytm:['paytm.com'],
+  phonepe:['phonepe.com'],gpay:['gpay.app','pay.google.com']
+};
+
+function isOfficialBrandDomain(brand, hostname) {
+  const official = BRAND_DOMAINS[brand] || [];
+  return official.some(d => hostname === d || hostname.endsWith('.' + d));
+}
+
+function hasPunycode(hostname) {
+  return hostname.split('.').some(label => label.startsWith('xn--'));
+}
+
+function hasNonASCII(str) {
+  return /[^\x00-\x7F]/.test(str);
+}
+
+function isIPv4(hostname) {
+  return /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+}
+
+function isIPv6(hostname) {
+  return hostname.startsWith('[') && hostname.endsWith(']');
+}
+
+function analyze(rawText) {
+  const text = rawText.trim();
+
+  /* ── special non-URL cases ── */
+  if (/^javascript:/i.test(text)) {
+    return { type: 'dangerous_scheme', raw: text };
+  }
+  if (/^data:/i.test(text)) {
+    return { type: 'dangerous_scheme', raw: text };
+  }
+  if (/^file:/i.test(text)) {
+    return { type: 'dangerous_scheme', raw: text };
+  }
+  if (/^upi:\/\//i.test(text)) {
+    return { type: 'upi', raw: text };
+  }
+
+  /* try to parse as URL */
+  let parsed;
+  try {
+    parsed = new URL(text);
+  } catch {
+    /* not a URL — could be plain text */
+    if (/^https?:\/\//i.test(text)) {
+      return { type: 'malformed', raw: text };
+    }
+    return { type: 'plain_text', raw: text };
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return { type: 'unknown_scheme', raw: text, scheme: parsed.protocol };
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+  const findings = [];
+  let score = 0;
+
+  /* ── C1: non-HTTPS ── */
+  if (parsed.protocol === 'http:') {
+    score += 20;
+    findings.push({ part: 'scheme', level: 'warn', points: 20,
+      title: 'No encryption (HTTP)',
+      detail: 'Connection is not encrypted. Anything you enter can be intercepted.' });
+  }
+
+  /* ── C2: IP address host ── */
+  if (isIPv4(hostname) || isIPv6(hostname)) {
+    score += 35;
+    findings.push({ part: 'host', level: 'danger', points: 35,
+      title: 'IP address instead of a domain name',
+      detail: 'Legitimate services use domain names. An IP address in a QR code is very unusual.' });
+  }
+
+  /* ── C3: @ in URL ── */
+  if (text.includes('@')) {
+    score += 30;
+    findings.push({ part: 'host', level: 'danger', points: 30,
+      title: '"@" in the address',
+      detail: 'Everything before "@" is ignored. The real destination is hidden after it.' });
+  }
+
+  /* ── C4: punycode / non-ASCII ── */
+  if (hasPunycode(hostname)) {
+    score += 30;
+    findings.push({ part: 'host', level: 'danger', points: 30,
+      title: 'Punycode domain (homograph attack)',
+      detail: 'The domain uses encoded non-Latin characters to look like a familiar brand name.' });
+  } else if (hasNonASCII(hostname)) {
+    score += 25;
+    findings.push({ part: 'host', level: 'danger', points: 25,
+      title: 'Non-ASCII characters in domain',
+      detail: 'Lookalike letters from other scripts can make a fake domain appear identical to a real one.' });
+  }
+
+  /* ── C5: URL shortener ── */
+  if (SHORTENERS.has(hostname)) {
+    score += 20;
+    findings.push({ part: 'host', level: 'warn', points: 20,
+      title: 'URL shortener',
+      detail: 'The real destination is hidden. Shorteners are sometimes used to disguise malicious links.' });
+  }
+
+  /* ── C6: brand in wrong domain ── */
+  const hostForBrand = hostname.replace(/^www\./, '');
+  let brandHit = null;
+  for (const brand of BRANDS) {
+    if (hostForBrand.includes(brand) && !isOfficialBrandDomain(brand, hostForBrand)) {
+      brandHit = brand;
+      break;
+    }
+  }
+  if (brandHit) {
+    score += 30;
+    findings.push({ part: 'host', level: 'danger', points: 30,
+      title: `"${brandHit}" in a domain that is not ${brandHit}`,
+      detail: `This is the most common phishing pattern. The real ${brandHit} does not use this domain.` });
+  }
+
+  /* ── C7: risky TLD ── */
+  const tld = hostname.split('.').pop();
+  if (RISKY_TLDS.has(tld)) {
+    score += 15;
+    findings.push({ part: 'host', level: 'warn', points: 15,
+      title: `Risky domain ending (.${tld})`,
+      detail: 'This domain extension is heavily used in phishing campaigns.' });
+  }
+
+  /* ── C8: many subdomains ── */
+  const labels = hostname.split('.');
+  if (labels.length > 4) {
+    score += 15;
+    findings.push({ part: 'host', level: 'warn', points: 15,
+      title: 'More than 4 domain labels',
+      detail: 'A deep hostname is sometimes used to bury a different real domain at the end.' });
+  }
+
+  /* ── C9: many hyphens ── */
+  const hyphens = (hostname.match(/-/g) || []).length;
+  if (hyphens >= 3) {
+    score += 10;
+    findings.push({ part: 'host', level: 'warn', points: 10,
+      title: `${hyphens} hyphens in the domain`,
+      detail: 'Phishing domains often use hyphens to combine brand names with other words.' });
+  }
+
+  /* ── C10: long URL ── */
+  if (text.length > 100) {
+    score += 10;
+    findings.push({ part: 'path', level: 'warn', points: 10,
+      title: `Long address (${text.length} characters)`,
+      detail: 'Legitimate QR codes rarely encode very long addresses.' });
+  }
+
+  /* ── C11: pressure words ── */
+  const pathAndQuery = (parsed.pathname + (parsed.search || '')).toLowerCase();
+  let pressureScore = 0;
+  const pressureHits = [];
+  for (const word of PRESSURE_WORDS) {
+    if (pathAndQuery.includes(word)) {
+      pressureHits.push(word);
+      pressureScore = Math.min(pressureScore + 10, 25);
+    }
+  }
+  if (pressureHits.length > 0) {
+    score += pressureScore;
+    findings.push({ part: 'path', level: 'warn', points: pressureScore,
+      title: `Pressure words in address: ${pressureHits.slice(0, 4).join(', ')}`,
+      detail: 'Words like "login", "verify" or "otp" combined with other signals suggest a phishing page.' });
+  }
+
+  score = Math.min(score, 100);
+
+  let verdict;
+  if (score < 20)      verdict = 'safe';
+  else if (score < 45) verdict = 'suspicious';
+  else                 verdict = 'dangerous';
+
+  return {
+    type: 'url',
+    raw: text,
+    parsed,
+    hostname,
+    score,
+    verdict,
+    findings
+  };
+}
+
+/* ══════════════════════════════════════════════════════════
+   RENDER
+══════════════════════════════════════════════════════════ */
+
+function analyzeAndRender(raw) {
+  clearError();
+  const result = analyze(raw);
+
+  /* special non-URL cases */
+  if (result.type === 'dangerous_scheme') {
+    renderSpecial('danger',
+      `Dangerous link type (${result.raw.split(':')[0]}:)`,
+      'This type of link can run code on your device or expose local files. Do not open it.',
+      result.raw);
+    return;
+  }
+  if (result.type === 'upi') {
+    renderSpecial('warn',
+      'Payment request (UPI)',
+      'This QR code encodes a payment instruction, not a website. Your payment app will show the recipient and amount before you confirm. Read both carefully.',
+      result.raw);
+    return;
+  }
+  if (result.type === 'plain_text') {
+    renderSpecial('safe',
+      'Plain text — not a link',
+      'This QR code contains text, not a web address. Read it carefully before acting on it.',
+      result.raw);
+    return;
+  }
+  if (result.type === 'malformed') {
+    renderSpecial('warn',
+      'Malformed address',
+      'The address could not be parsed. It starts like a web link but is not valid. Do not attempt to open it manually.',
+      result.raw);
+    return;
+  }
+  if (result.type === 'unknown_scheme') {
+    renderSpecial('warn',
+      `Unusual link type (${result.scheme})`,
+      'This is not a standard web address. Be cautious — unknown schemes can be used to trigger apps or run actions on your device.',
+      result.raw);
+    return;
+  }
+
+  /* full URL result */
+  renderURL(result);
+}
+
+function renderSpecial(level, title, detail, raw) {
+  const section = document.getElementById('result-section');
+  const badge   = document.getElementById('verdict-badge');
+  const icon    = document.getElementById('verdict-icon');
+  const text    = document.getElementById('verdict-text');
+  const score   = document.getElementById('verdict-score');
+  const anatomy = document.getElementById('anatomy-section');
+  const list    = document.getElementById('findings-list');
+  const fhead   = document.getElementById('findings-heading');
+
+  setVerdictBadge(badge, icon, text, level, title);
+  score.textContent = '';
+
+  /* anatomy: just show the raw decoded text */
+  const display = document.getElementById('url-display');
+  display.textContent = '';
+  const span = document.createElement('span');
+  span.className = 'url-part';
+  span.textContent = raw;
+  display.appendChild(span);
+
+  fhead.textContent = 'What we found';
+  list.textContent = '';
+  const li = document.createElement('li');
+  li.className = `finding-item ${level}`;
+  const iconEl = document.createElement('span');
+  iconEl.className = 'finding-icon';
+  iconEl.setAttribute('aria-hidden', 'true');
+  iconEl.textContent = levelIcon(level);
+  const textEl = document.createElement('span');
+  textEl.className = 'finding-text';
+  const strong = document.createElement('strong');
+  strong.textContent = title;
+  const small = document.createElement('small');
+  small.textContent = detail;
+  textEl.appendChild(strong);
+  textEl.appendChild(small);
+  li.appendChild(iconEl);
+  li.appendChild(textEl);
+  list.appendChild(li);
+
+  section.style.display = 'block';
+}
+
+function renderURL(result) {
+  const { raw, parsed, score, verdict, findings } = result;
+  const section = document.getElementById('result-section');
+  const badge   = document.getElementById('verdict-badge');
+  const icon    = document.getElementById('verdict-icon');
+  const text    = document.getElementById('verdict-text');
+  const scoreEl = document.getElementById('verdict-score');
+  const list    = document.getElementById('findings-list');
+  const fhead   = document.getElementById('findings-heading');
+  const display = document.getElementById('url-display');
+
+  /* verdict badge */
+  const verdictLabels = {
+    safe:      'No warning signs found',
+    suspicious:'Suspicious',
+    dangerous: 'Dangerous'
+  };
+  setVerdictBadge(badge, icon, text, verdict, verdictLabels[verdict]);
+  scoreEl.textContent = `Risk score: ${score} / 100`;
+
+  /* URL anatomy display */
+  display.textContent = '';
+  buildURLAnatomy(display, raw, parsed, findings);
+
+  /* findings list */
+  list.textContent = '';
+  if (findings.length === 0) {
+    fhead.textContent = 'Findings';
+    const li = document.createElement('li');
+    li.className = 'finding-item safe';
+    const iconEl = document.createElement('span');
+    iconEl.className = 'finding-icon';
+    iconEl.setAttribute('aria-hidden', 'true');
+    iconEl.textContent = '✓';
+    const textEl = document.createElement('span');
+    textEl.className = 'finding-text';
+    const strong = document.createElement('strong');
+    strong.textContent = 'No warning signs found';
+    const small = document.createElement('small');
+    small.textContent = 'None of the checked patterns were detected. This does not guarantee the link is safe.';
+    textEl.appendChild(strong);
+    textEl.appendChild(small);
+    li.appendChild(iconEl);
+    li.appendChild(textEl);
+    list.appendChild(li);
+  } else {
+    fhead.textContent = `${findings.length} issue${findings.length > 1 ? 's' : ''} found`;
+    for (const f of findings) {
+      const li  = document.createElement('li');
+      li.className = `finding-item ${f.level}`;
+      const fi  = document.createElement('span');
+      fi.className = 'finding-icon';
+      fi.setAttribute('aria-hidden', 'true');
+      fi.textContent = levelIcon(f.level);
+      const ft  = document.createElement('span');
+      ft.className = 'finding-text';
+      const fs  = document.createElement('strong');
+      fs.textContent = f.title;
+      const fd  = document.createElement('small');
+      fd.textContent = f.detail + (f.points ? ` (+${f.points} pts)` : '');
+      ft.appendChild(fs);
+      ft.appendChild(fd);
+      li.appendChild(fi);
+      li.appendChild(ft);
+      list.appendChild(li);
+    }
+  }
+
+  section.style.display = 'block';
+}
+
+function buildURLAnatomy(container, raw, parsed, findings) {
+  /* determine which parts are flagged */
+  const flaggedParts = new Set(findings.map(f => f.part));
+  const flagLevelFor = {};
+  for (const f of findings) {
+    const existing = flagLevelFor[f.part];
+    if (!existing || f.level === 'danger') flagLevelFor[f.part] = f.level;
+  }
+
+  /* helper */
+  function addPart(text, partKey, labelText) {
+    if (!text) return;
+    const span = document.createElement('span');
+    span.className = 'url-part';
+    if (flaggedParts.has(partKey)) {
+      span.classList.add(flagLevelFor[partKey] === 'danger' ? 'flagged' : 'flagged-warn');
+    }
+    span.textContent = text;
+    if (labelText) span.title = labelText;
+    container.appendChild(span);
+  }
+
+  const scheme   = parsed.protocol;            // "https:"
+  const slashes  = '//';
+  const userinfo = parsed.username ? (parsed.username + (parsed.password ? ':***' : '') + '@') : '';
+  const host     = parsed.hostname;
+  const port     = parsed.port ? ':' + parsed.port : '';
+  const path     = parsed.pathname !== '/' ? parsed.pathname : '/';
+  const query    = parsed.search || '';
+  const fragment = parsed.hash   || '';
+
+  addPart(scheme,   'scheme', 'Scheme — the protocol used');
+  addPart(slashes,  null,     null);
+  if (userinfo) addPart(userinfo, 'host', 'Credentials embedded in URL');
+  addPart(host,     'host',   'Hostname — the server you connect to');
+  addPart(port,     'host',   'Port');
+  if (path && path !== '/') addPart(path, 'path', 'Path');
+  else if (!query)          addPart('/', null, 'Path');
+  if (query)    addPart(query,    'path', 'Query string');
+  if (fragment) addPart(fragment, null,   'Fragment (not sent to server)');
+}
+
+function setVerdictBadge(badge, icon, text, level, label) {
+  badge.className = 'verdict-badge';
+  if (level === 'safe')      { badge.classList.add('safe');   icon.textContent = '✓'; }
+  if (level === 'suspicious'||level === 'warn') { badge.classList.add('warn');   icon.textContent = '⚠'; }
+  if (level === 'dangerous'||level === 'danger') { badge.classList.add('danger'); icon.textContent = '✕'; }
+  text.textContent = label;
+}
+
+function levelIcon(level) {
+  if (level === 'safe')    return '✓';
+  if (level === 'warn')    return '⚠';
+  if (level === 'danger')  return '✕';
+  return '–';
+}
+</script>
+</body>
+</html>
